@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Folk DJ Player</title>
+<meta name="description" content="A simple mobile-friendly music player for the folk song playlist.">
+<meta name="theme-color" content="#0f0c1a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <span class="logo">🎧 Folk DJ</span>
+    <span class="count" id="trackCount"></span>
+  </header>
+
+  <main class="player">
+    <div class="art" id="art">
+      <div class="art-disc" id="disc">🎵</div>
+    </div>
+
+    <div class="meta">
+      <h1 id="title">Loading…</h1>
+      <p id="artist">—</p>
+    </div>
+
+    <div class="progress-wrap">
+      <span class="time" id="curTime">0:00</span>
+      <input type="range" id="seek" min="0" max="100" value="0" step="0.1">
+      <span class="time" id="durTime">0:00</span>
+    </div>
+
+    <div class="controls">
+      <button id="shuffleBtn" class="ctl small" title="Shuffle" aria-label="Shuffle">🔀</button>
+      <button id="prevBtn" class="ctl" title="Previous" aria-label="Previous">⏮</button>
+      <button id="playBtn" class="ctl big" title="Play/Pause" aria-label="Play or pause">▶️</button>
+      <button id="nextBtn" class="ctl" title="Next" aria-label="Next">⏭</button>
+      <button id="repeatBtn" class="ctl small" title="Repeat" aria-label="Repeat">🔁</button>
+    </div>
+
+    <div class="volume-wrap">
+      <span>🔊</span>
+      <input type="range" id="volume" min="0" max="1" value="1" step="0.01">
+    </div>
+
+    <p class="status" id="status" aria-live="polite"></p>
+  </main>
+
+  <section class="playlist" id="playlist" aria-label="Playlist"></section>
+
+  <footer class="foot">Tap a song to play • Works offline once loaded</footer>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script src="songs.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

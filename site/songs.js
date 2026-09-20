@@ -1,0 +1,16 @@
+// Playlist manifest — file names are web-safe; titles are the cleaned display names.
+const PLAYLIST = [
+  { file: "songs/song01.mp3", title: "Aata Sandeep — Yesha Nagula Katta Meeda", artist: "The Paradise" },
+  { file: "songs/song02.mp3", title: "Dj పిల్ల", artist: "Folk Song • Nizamabad" },
+  { file: "songs/song03.mp3", title: "Ganesh Ochindu Ganesh ❤️", artist: "Bhagya Raj Chinny • Vinayaka Chavithi" },
+  { file: "songs/song04.mp3", title: "Gurujevanne", artist: "Folk Song" },
+  { file: "songs/song05.mp3", title: "Malle Poola Pallaki Bangaru Pallaki 🙏🤩", artist: "Sekhar Master Dance • Ravi Teja" },
+  { file: "songs/song06.mp3", title: "అబ్బబ్బ గాపోరి ఏముందిరో", artist: "Folk Song" },
+  { file: "songs/song07.mp3", title: "నేను రాను జాతర", artist: "Folk Song" },
+  { file: "songs/song08.mp3", title: "ప్రమీల సాంగ్", artist: "Folk Song" },
+  { file: "songs/song09.mp3", title: "బాసింగ బాసింగ బలలే", artist: "Folk Song" },
+  { file: "songs/song10.mp3", title: "మల్లెచెట్టు కిందకూసున్న", artist: "Folk Song" },
+  { file: "songs/song11.mp3", title: "మామిడి కోణాల మీద", artist: "Folk Song • Naga Dhurga" },
+  { file: "songs/song12.mp3", title: "లాగరే సౌండ్ వాలా", artist: "Folk Song" },
+  { file: "songs/song13.mp3", title: "శెంబు మీద శెంబు పెట్టి చేతుల చెయ్యేసి చెప్పు", artist: "Folk Song" },
+];
