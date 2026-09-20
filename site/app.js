@@ -49,6 +49,40 @@
     return order[pos];
   }
 
+  // Prefetch the next track's audio bytes in the background so playback can
+  // start instantly (no loading gap) the moment the current track ends.
+  const prefetchCache = new Map(); // playlist index -> blob: URL
+  const PREFETCH_LIMIT = 3;
+
+  function peekNextIndex() {
+    if (pos < order.length - 1) return order[pos + 1];
+    if (repeatMode === 1) return order[0];
+    return null;
+  }
+
+  function prefetchIndex(idx) {
+    if (idx == null || prefetchCache.has(idx)) return;
+    const song = PLAYLIST[idx];
+    if (!song) return;
+    prefetchCache.set(idx, "pending");
+    fetch(song.file)
+      .then((res) => (res.ok ? res.blob() : Promise.reject()))
+      .then((blob) => {
+        prefetchCache.set(idx, URL.createObjectURL(blob));
+        if (prefetchCache.size > PREFETCH_LIMIT) {
+          for (const key of prefetchCache.keys()) {
+            if (key !== idx && key !== currentIndex()) {
+              const url = prefetchCache.get(key);
+              if (url && url !== "pending") URL.revokeObjectURL(url);
+              prefetchCache.delete(key);
+              break;
+            }
+          }
+        }
+      })
+      .catch(() => { prefetchCache.delete(idx); });
+  }
+
   function renderPlaylist() {
     playlistEl.innerHTML = "";
     PLAYLIST.forEach((song, i) => {
@@ -82,9 +116,11 @@
   }
 
   function loadTrack(autoplay) {
-    const song = PLAYLIST[currentIndex()];
+    const idx = currentIndex();
+    const song = PLAYLIST[idx];
     if (!song) return;
-    audio.src = song.file;
+    const cached = prefetchCache.get(idx);
+    audio.src = cached && cached !== "pending" ? cached : song.file;
     titleEl.textContent = song.title;
     artistEl.textContent = song.artist || "";
     miniTitle.textContent = song.title;
@@ -99,7 +135,8 @@
         statusEl.textContent = "Tap play to start.";
       });
     }
-    try { localStorage.setItem("folkdj_last", String(currentIndex())); } catch (e) {}
+    try { localStorage.setItem("folkdj_last", String(idx)); } catch (e) {}
+    prefetchIndex(peekNextIndex());
   }
 
   function updatePlayState() {
@@ -189,12 +226,14 @@
     pos = order.indexOf(currentSongIdx);
     shuffleBtn.classList.toggle("active", shuffle);
     renderPlaylist();
+    prefetchIndex(peekNextIndex());
   });
 
   repeatBtn.addEventListener("click", () => {
     repeatMode = (repeatMode + 1) % 3;
     repeatBtn.classList.toggle("active", repeatMode !== 0);
     repeatBtn.textContent = repeatMode === 2 ? "🔂" : "🔁";
+    prefetchIndex(peekNextIndex());
   });
 
   audio.addEventListener("play", updatePlayState);
