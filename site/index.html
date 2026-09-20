@@ -51,9 +51,9 @@
       <button id="stopBtn" class="pill-btn" title="Stop playback" aria-label="Stop">⏹ Stop</button>
       <button id="floatBtn" class="pill-btn" title="Show floating mini-player overlay" aria-label="Show overlay">🗗 Overlay</button>
       <button id="pipBtn" class="pill-btn" title="Pop out as always-on-top window" aria-label="Pop out player" hidden>📌 Pop-out</button>
-      <button id="installBtn" class="pill-btn" title="Install as app for best background playback" aria-label="Install app" hidden>⬇️ Install App</button>
     </div>
-    <p class="hint" id="bgHint">💡 For uninterrupted playback with the screen off, install this as an app (tap “Install App” above, or your browser’s “Add to Home Screen”).</p>
+    <button id="installBtn" class="install-btn">⬇️ Install as App</button>
+    <p class="hint" id="bgHint">💡 Installing gives the most reliable background &amp; screen-off playback, with its own app icon on your phone.</p>
 
     <div class="volume-wrap">
       <span>🔊</span>
@@ -77,6 +77,15 @@
   <button id="miniPlayBtn" class="mini-btn" aria-label="Play or pause">▶️</button>
   <button id="miniStopBtn" class="mini-btn" aria-label="Stop">⏹</button>
   <button id="miniCloseBtn" class="mini-btn" aria-label="Close overlay">✕</button>
+</div>
+
+<div id="installModal" class="install-modal" hidden>
+  <div class="install-modal-card">
+    <button id="installModalClose" class="install-modal-close" aria-label="Close">✕</button>
+    <h2>Install Folk DJ</h2>
+    <p id="installModalBody">Add this player to your home screen so it opens like a real app.</p>
+    <button id="installModalOk" class="install-btn">Got it</button>
+  </div>
 </div>
 
 <audio id="audio" preload="metadata"></audio>

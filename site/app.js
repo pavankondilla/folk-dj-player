@@ -19,6 +19,10 @@
   const floatBtn = document.getElementById("floatBtn");
   const pipBtn = document.getElementById("pipBtn");
   const installBtn = document.getElementById("installBtn");
+  const installModal = document.getElementById("installModal");
+  const installModalBody = document.getElementById("installModalBody");
+  const installModalClose = document.getElementById("installModalClose");
+  const installModalOk = document.getElementById("installModalOk");
   const miniPlayer = document.getElementById("miniPlayer");
   const miniTitle = document.getElementById("miniTitle");
   const miniPlayBtn = document.getElementById("miniPlayBtn");
@@ -348,22 +352,86 @@
     });
   }
 
-  // Install-as-app prompt: standalone/installed apps get the most reliable
-  // background and screen-off playback on mobile.
+  // Install-as-app: standalone/installed apps get the most reliable
+  // background and screen-off playback on mobile. The button is always
+  // visible; it uses the native install prompt where the browser supports
+  // it (Chrome/Edge/Android), and otherwise shows clear manual steps
+  // (e.g. iOS Safari, which never fires beforeinstallprompt) — never a
+  // silent no-op or an error.
   let deferredInstallPrompt = null;
+
+  function isStandalone() {
+    try {
+      return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function markInstalled() {
+    installBtn.textContent = "✓ Installed as App";
+    installBtn.classList.add("installed");
+  }
+
+  function openInstallModal(html) {
+    installModalBody.innerHTML = html;
+    installModal.hidden = false;
+  }
+  function closeInstallModal() { installModal.hidden = true; }
+  installModalClose.addEventListener("click", closeInstallModal);
+  installModalOk.addEventListener("click", closeInstallModal);
+  installModal.addEventListener("click", (e) => {
+    if (e.target === installModal) closeInstallModal();
+  });
+
+  function manualInstallInstructions() {
+    const ua = navigator.userAgent || "";
+    const isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
+    const isAndroid = /android/i.test(ua);
+    if (isIOS) {
+      return "On iPhone/iPad (Safari):\n\n1. Tap the Share icon (square with an arrow) in the toolbar.\n2. Scroll down and tap “Add to Home Screen”.\n3. Tap “Add”.\n\nThe Folk DJ icon will appear on your home screen and open like a real app.";
+    }
+    if (isAndroid) {
+      return "On Android:\n\n1. Tap the ⋮ menu in your browser.\n2. Tap “Install app” or “Add to Home screen”.\n3. Confirm “Install”.\n\nIf you don't see that option yet, reload the page once and try again — some browsers need a moment to detect it's installable.";
+    }
+    return "On desktop Chrome/Edge:\n\n1. Look for the install icon (⤓ or a small computer icon) at the right of the address bar.\n2. Click it, then click “Install”.\n\nIf it's not there yet, open the browser menu (⋮) and look for “Install Folk DJ…”.\n\nNote: some browsers (like Firefox) don't support installing sites as apps — the player will still work great as a regular tab, and audio keeps playing in the background while the tab stays open.";
+  }
+
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    installBtn.hidden = false;
   });
+
   installBtn.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
-    installBtn.hidden = true;
+    if (isStandalone()) {
+      openInstallModal("Folk DJ is already installed and running as an app. 🎉");
+      return;
+    }
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        if (choice && choice.outcome === "accepted") {
+          markInstalled();
+        }
+      } catch (e) {
+        openInstallModal(manualInstallInstructions());
+      }
+      return;
+    }
+    openInstallModal(manualInstallInstructions());
   });
-  window.addEventListener("appinstalled", () => { installBtn.hidden = true; });
+
+  window.addEventListener("appinstalled", () => {
+    markInstalled();
+    closeInstallModal();
+  });
+
+  if (isStandalone()) markInstalled();
 
   // Register service worker so the app shell + played songs are cached and
   // playback keeps working reliably across app switches and reloads.
