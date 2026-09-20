@@ -29,12 +29,24 @@
   const miniStopBtn = document.getElementById("miniStopBtn");
   const miniCloseBtn = document.getElementById("miniCloseBtn");
   const miniDrag = document.getElementById("miniDrag");
+  const lockBtn = document.getElementById("lockBtn");
+  const lockModal = document.getElementById("lockModal");
+  const lockModalCard = document.getElementById("lockModalCard");
+  const lockBadge = document.getElementById("lockBadge");
+  const mixBtn = document.getElementById("mixBtn");
+  const mixBadge = document.getElementById("mixBadge");
 
   let order = PLAYLIST.map((_, i) => i);
   let pos = 0; // index into `order`
   let shuffle = false;
   let repeatMode = 0; // 0 off, 1 repeat all, 2 repeat one
   let isSeeking = false;
+  let locked = false;
+  let lockMode = null; // "song" | "all"
+  let savedRepeatMode = null;
+  let mixActive = false;
+
+  const INTRO_SKIP = 2; // seconds to skip at the start of every song
 
   trackCount.textContent = PLAYLIST.length + " tracks";
 
@@ -47,6 +59,12 @@
 
   function currentIndex() {
     return order[pos];
+  }
+
+  function skipIntro() {
+    if (audio.duration > INTRO_SKIP + 0.5) {
+      try { audio.currentTime = INTRO_SKIP; } catch (e) {}
+    }
   }
 
   // Prefetch the next track's audio bytes in the background so playback can
@@ -97,6 +115,8 @@
       row.querySelector(".t").textContent = song.title;
       row.querySelector(".a").textContent = song.artist || "";
       row.addEventListener("click", () => {
+        if (locked) return;
+        exitMixMode();
         const idx = order.indexOf(i);
         pos = idx !== -1 ? idx : 0;
         loadTrack(true);
@@ -167,11 +187,12 @@
         album: "Folk DJ Playlist",
       });
       navigator.mediaSession.setActionHandler("play", () => audio.play());
-      navigator.mediaSession.setActionHandler("pause", () => audio.pause());
-      navigator.mediaSession.setActionHandler("previoustrack", playPrev);
-      navigator.mediaSession.setActionHandler("nexttrack", () => playNext(false));
-      navigator.mediaSession.setActionHandler("stop", stopPlayback);
+      navigator.mediaSession.setActionHandler("pause", () => { if (!locked) audio.pause(); });
+      navigator.mediaSession.setActionHandler("previoustrack", () => { if (!locked) playPrev(); });
+      navigator.mediaSession.setActionHandler("nexttrack", () => { if (!locked) playNext(false); });
+      navigator.mediaSession.setActionHandler("stop", () => { if (!locked) stopPlayback(); });
       navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (locked) return;
         if (details.seekTime != null && isFinite(audio.duration)) {
           audio.currentTime = details.seekTime;
         }
@@ -181,8 +202,9 @@
 
   function playNext(auto) {
     if (repeatMode === 2 && auto) {
-      audio.currentTime = 0;
-      audio.play();
+      // Repeat-one restarts the same track, so also apply the intro skip here.
+      audio.currentTime = audio.duration > INTRO_SKIP + 0.5 ? INTRO_SKIP : 0;
+      audio.play().catch(() => {});
       return;
     }
     if (pos < order.length - 1) {
@@ -209,6 +231,7 @@
   }
 
   playBtn.addEventListener("click", () => {
+    if (locked) return;
     if (audio.paused) {
       audio.play().catch(() => { statusEl.textContent = "Couldn't play this track."; });
     } else {
@@ -216,10 +239,12 @@
     }
   });
 
-  nextBtn.addEventListener("click", () => playNext(false));
-  prevBtn.addEventListener("click", playPrev);
+  nextBtn.addEventListener("click", () => { if (!locked) playNext(false); });
+  prevBtn.addEventListener("click", () => { if (!locked) playPrev(); });
 
   shuffleBtn.addEventListener("click", () => {
+    if (locked) return;
+    exitMixMode();
     shuffle = !shuffle;
     const currentSongIdx = currentIndex();
     buildOrder();
@@ -230,6 +255,8 @@
   });
 
   repeatBtn.addEventListener("click", () => {
+    if (locked) return;
+    exitMixMode();
     repeatMode = (repeatMode + 1) % 3;
     repeatBtn.classList.toggle("active", repeatMode !== 0);
     repeatBtn.textContent = repeatMode === 2 ? "🔂" : "🔁";
@@ -250,6 +277,7 @@
 
   audio.addEventListener("loadedmetadata", () => {
     durTime.textContent = fmtTime(audio.duration);
+    skipIntro();
   });
 
   audio.addEventListener("error", () => {
@@ -257,8 +285,9 @@
     setTimeout(() => playNext(true), 800);
   });
 
-  seek.addEventListener("input", () => { isSeeking = true; });
+  seek.addEventListener("input", () => { if (!locked) isSeeking = true; });
   seek.addEventListener("change", () => {
+    if (locked) return;
     if (audio.duration) {
       audio.currentTime = (seek.value / 100) * audio.duration;
     }
@@ -270,10 +299,11 @@
     try { localStorage.setItem("folkdj_vol", volume.value); } catch (e) {}
   });
 
-  stopBtn.addEventListener("click", stopPlayback);
-  miniStopBtn.addEventListener("click", stopPlayback);
+  stopBtn.addEventListener("click", () => { if (!locked) stopPlayback(); });
+  miniStopBtn.addEventListener("click", () => { if (!locked) stopPlayback(); });
 
   miniPlayBtn.addEventListener("click", () => {
+    if (locked) return;
     if (audio.paused) {
       audio.play().catch(() => { statusEl.textContent = "Couldn't play this track."; });
     } else {
@@ -480,11 +510,115 @@
     });
   }
 
+  // Mix mode: plays every song back-to-back as one continuous session
+  // (normal order, looping), separate from picking individual tracks.
+  function exitMixMode() {
+    if (!mixActive) return;
+    mixActive = false;
+    mixBtn.classList.remove("active");
+    mixBadge.hidden = true;
+  }
+
+  mixBtn.addEventListener("click", () => {
+    if (locked) return;
+    shuffle = false;
+    shuffleBtn.classList.remove("active");
+    buildOrder();
+    repeatMode = 1;
+    repeatBtn.classList.add("active");
+    repeatBtn.textContent = "🔁";
+    pos = 0;
+    mixActive = true;
+    mixBtn.classList.add("active");
+    mixBadge.hidden = false;
+    loadTrack(true);
+  });
+
+  // Lock: once active, playback can't be paused, stopped, skipped, or
+  // switched by anyone until it's explicitly unlocked. The user chooses
+  // whether to lock just the current song (looped) or the whole
+  // playlist/mix (keeps advancing through everything).
+  function updateLockUI() {
+    document.body.classList.toggle("locked", locked);
+    lockBadge.hidden = !locked;
+    lockBadge.textContent = lockMode === "song" ? "🔒 LOCKED — THIS SONG" : "🔒 LOCKED — MIX/PLAYLIST";
+    lockBtn.classList.toggle("active", locked);
+    lockBtn.textContent = locked ? "🔒 Locked" : "🔒 Lock";
+  }
+
+  function closeLockModal() { lockModal.hidden = true; }
+  lockModal.addEventListener("click", (e) => { if (e.target === lockModal) closeLockModal(); });
+
+  function activateLock(mode) {
+    lockMode = mode;
+    savedRepeatMode = repeatMode;
+    repeatMode = mode === "song" ? 2 : 1;
+    repeatBtn.classList.toggle("active", repeatMode !== 0);
+    repeatBtn.textContent = repeatMode === 2 ? "🔂" : "🔁";
+    locked = true;
+    updateLockUI();
+    closeLockModal();
+    if (audio.paused) audio.play().catch(() => {});
+  }
+
+  function deactivateLock() {
+    locked = false;
+    if (savedRepeatMode != null) {
+      repeatMode = savedRepeatMode;
+      repeatBtn.classList.toggle("active", repeatMode !== 0);
+      repeatBtn.textContent = repeatMode === 2 ? "🔂" : "🔁";
+    }
+    savedRepeatMode = null;
+    lockMode = null;
+    updateLockUI();
+    closeLockModal();
+  }
+
+  function showLockChooseModal() {
+    lockModalCard.innerHTML =
+      '<h2>🔒 Lock Playback</h2>' +
+      '<p>While locked, playback can\'t be paused, stopped, or changed by anyone until you unlock it. Choose what to lock:</p>' +
+      '<button id="lockChooseSong" class="install-btn">🔂 Lock this one song (repeats)</button>' +
+      '<button id="lockChooseAll" class="install-btn" style="margin-top:10px;background:var(--card);color:var(--text);box-shadow:none;border:1px solid rgba(255,255,255,0.12);">🎶 Lock whole playlist / mix (keeps playing through)</button>' +
+      '<button id="lockChooseCancel" style="margin-top:14px;background:none;border:none;color:var(--muted);font-size:0.8rem;cursor:pointer;width:100%;">Cancel</button>';
+    lockModal.hidden = false;
+    document.getElementById("lockChooseSong").addEventListener("click", () => activateLock("song"));
+    document.getElementById("lockChooseAll").addEventListener("click", () => activateLock("all"));
+    document.getElementById("lockChooseCancel").addEventListener("click", closeLockModal);
+  }
+
+  function showUnlockConfirm() {
+    const what = lockMode === "song" ? "This song is locked on repeat." : "The playlist/mix is locked and playing continuously.";
+    lockModalCard.innerHTML =
+      '<h2>🔒 Locked</h2>' +
+      '<p>' + what + ' Unlock to allow pause, skip, and song changes again?</p>' +
+      '<button id="lockUnlockConfirm" class="install-btn">🔓 Unlock</button>' +
+      '<button id="lockUnlockCancel" style="margin-top:10px;background:none;border:none;color:var(--muted);font-size:0.8rem;cursor:pointer;width:100%;">Stay Locked</button>';
+    lockModal.hidden = false;
+    document.getElementById("lockUnlockConfirm").addEventListener("click", deactivateLock);
+    document.getElementById("lockUnlockCancel").addEventListener("click", closeLockModal);
+  }
+
+  lockBtn.addEventListener("click", () => {
+    if (locked) showUnlockConfirm(); else showLockChooseModal();
+  });
+
   document.addEventListener("keydown", (e) => {
+    if (locked) return;
     if (e.target.tagName === "INPUT") return;
     if (e.code === "Space") { e.preventDefault(); playBtn.click(); }
     if (e.code === "ArrowRight") nextBtn.click();
     if (e.code === "ArrowLeft") prevBtn.click();
+  });
+
+  // Safety net: if something outside our own controls pauses the audio while
+  // locked (e.g. an OS-level interruption), resume automatically so the
+  // locked track/playlist truly can't be stopped.
+  audio.addEventListener("pause", () => {
+    if (!locked) return;
+    setTimeout(() => {
+      if (locked && audio.paused && !audio.ended) audio.play().catch(() => {});
+    }, 200);
   });
 
   // Restore preferences

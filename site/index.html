@@ -29,6 +29,8 @@
     </div>
 
     <div class="meta">
+      <span class="badge" id="mixBadge" hidden>🎚 MIX — ALL SONGS</span>
+      <span class="badge lock" id="lockBadge" hidden>🔒 LOCKED</span>
       <h1 id="title">Loading…</h1>
       <p id="artist">—</p>
     </div>
@@ -51,6 +53,7 @@
       <button id="stopBtn" class="pill-btn" title="Stop playback" aria-label="Stop">⏹ Stop</button>
       <button id="floatBtn" class="pill-btn" title="Show floating mini-player overlay" aria-label="Show overlay">🗗 Overlay</button>
       <button id="pipBtn" class="pill-btn" title="Pop out as always-on-top window" aria-label="Pop out player" hidden>📌 Pop-out</button>
+      <button id="lockBtn" class="pill-btn lock-btn" title="Lock playback" aria-label="Lock playback">🔒 Lock</button>
     </div>
     <button id="installBtn" class="install-btn">⬇️ Install as App</button>
     <p class="hint" id="bgHint">💡 Installing gives the most reliable background &amp; screen-off playback, with its own app icon on your phone.</p>
@@ -62,6 +65,8 @@
 
     <p class="status" id="status" aria-live="polite"></p>
   </main>
+
+  <button id="mixBtn" class="mix-btn">🎚️ Play Full Mix — All Songs Back-to-Back</button>
 
   <section class="playlist" id="playlist" aria-label="Playlist"></section>
 
@@ -86,6 +91,10 @@
     <p id="installModalBody">Add this player to your home screen so it opens like a real app.</p>
     <button id="installModalOk" class="install-btn">Got it</button>
   </div>
+</div>
+
+<div id="lockModal" class="install-modal" hidden>
+  <div class="install-modal-card" id="lockModalCard"></div>
 </div>
 
 <audio id="audio" preload="auto"></audio>
