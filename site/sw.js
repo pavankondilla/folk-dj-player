@@ -1,4 +1,4 @@
-const CACHE = "folkdj-v2";
+const CACHE = "folkdj-v3";
 const CORE_ASSETS = [
   "./",
   "index.html",
