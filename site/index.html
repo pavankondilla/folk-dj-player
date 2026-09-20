@@ -6,7 +6,13 @@
 <title>Folk DJ Player</title>
 <meta name="description" content="A simple mobile-friendly music player for the folk song playlist.">
 <meta name="theme-color" content="#0f0c1a">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Folk DJ">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -41,6 +47,14 @@
       <button id="repeatBtn" class="ctl small" title="Repeat" aria-label="Repeat">🔁</button>
     </div>
 
+    <div class="controls-row2">
+      <button id="stopBtn" class="pill-btn" title="Stop playback" aria-label="Stop">⏹ Stop</button>
+      <button id="floatBtn" class="pill-btn" title="Show floating mini-player overlay" aria-label="Show overlay">🗗 Overlay</button>
+      <button id="pipBtn" class="pill-btn" title="Pop out as always-on-top window" aria-label="Pop out player" hidden>📌 Pop-out</button>
+      <button id="installBtn" class="pill-btn" title="Install as app for best background playback" aria-label="Install app" hidden>⬇️ Install App</button>
+    </div>
+    <p class="hint" id="bgHint">💡 For uninterrupted playback with the screen off, install this as an app (tap “Install App” above, or your browser’s “Add to Home Screen”).</p>
+
     <div class="volume-wrap">
       <span>🔊</span>
       <input type="range" id="volume" min="0" max="1" value="1" step="0.01">
@@ -52,6 +66,17 @@
   <section class="playlist" id="playlist" aria-label="Playlist"></section>
 
   <footer class="foot">Tap a song to play • Works offline once loaded</footer>
+</div>
+
+<div id="miniPlayer" class="mini-player" hidden>
+  <button id="miniDrag" class="mini-drag" aria-label="Drag handle">⠿</button>
+  <div class="mini-art">🎵</div>
+  <div class="mini-info">
+    <div class="mini-title" id="miniTitle">—</div>
+  </div>
+  <button id="miniPlayBtn" class="mini-btn" aria-label="Play or pause">▶️</button>
+  <button id="miniStopBtn" class="mini-btn" aria-label="Stop">⏹</button>
+  <button id="miniCloseBtn" class="mini-btn" aria-label="Close overlay">✕</button>
 </div>
 
 <audio id="audio" preload="metadata"></audio>

@@ -165,6 +165,99 @@ input[type="range"]::-moz-range-thumb {
   color: var(--muted);
 }
 
+.controls-row2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.pill-btn {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.2s ease;
+}
+.pill-btn:active { transform: scale(0.95); }
+.pill-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; }
+
+.hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 10px 4px 0;
+  line-height: 1.4;
+}
+
+/* Floating mini-player overlay */
+.mini-player {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(28, 22, 48, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 8px 10px 8px 6px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  max-width: min(92vw, 340px);
+  touch-action: none;
+  user-select: none;
+}
+.mini-player[hidden] { display: none; }
+
+.mini-drag {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: grab;
+  padding: 4px 2px;
+  touch-action: none;
+}
+
+.mini-art {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--accent2), var(--bg2) 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.mini-info { flex: 1; min-width: 0; }
+.mini-title {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-btn {
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.mini-btn:active { transform: scale(0.92); }
+
 .status {
   min-height: 18px;
   font-size: 0.8rem;

@@ -15,6 +15,16 @@
   const statusEl = document.getElementById("status");
   const playlistEl = document.getElementById("playlist");
   const trackCount = document.getElementById("trackCount");
+  const stopBtn = document.getElementById("stopBtn");
+  const floatBtn = document.getElementById("floatBtn");
+  const pipBtn = document.getElementById("pipBtn");
+  const installBtn = document.getElementById("installBtn");
+  const miniPlayer = document.getElementById("miniPlayer");
+  const miniTitle = document.getElementById("miniTitle");
+  const miniPlayBtn = document.getElementById("miniPlayBtn");
+  const miniStopBtn = document.getElementById("miniStopBtn");
+  const miniCloseBtn = document.getElementById("miniCloseBtn");
+  const miniDrag = document.getElementById("miniDrag");
 
   let order = PLAYLIST.map((_, i) => i);
   let pos = 0; // index into `order`
@@ -73,6 +83,7 @@
     audio.src = song.file;
     titleEl.textContent = song.title;
     artistEl.textContent = song.artist || "";
+    miniTitle.textContent = song.title;
     statusEl.textContent = "";
     seek.value = 0;
     curTime.textContent = "0:00";
@@ -90,11 +101,20 @@
   function updatePlayState() {
     const playing = !audio.paused && !audio.ended;
     playBtn.textContent = playing ? "⏸️" : "▶️";
+    miniPlayBtn.textContent = playing ? "⏸️" : "▶️";
     art.classList.toggle("spinning", playing);
     renderPlaylist();
     if ("mediaSession" in navigator) {
       navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     }
+  }
+
+  function stopPlayback() {
+    audio.pause();
+    audio.currentTime = 0;
+    seek.value = 0;
+    curTime.textContent = "0:00";
+    updatePlayState();
   }
 
   function updateMediaSession(song) {
@@ -108,7 +128,13 @@
       navigator.mediaSession.setActionHandler("play", () => audio.play());
       navigator.mediaSession.setActionHandler("pause", () => audio.pause());
       navigator.mediaSession.setActionHandler("previoustrack", playPrev);
-      navigator.mediaSession.setActionHandler("nexttrack", playNext);
+      navigator.mediaSession.setActionHandler("nexttrack", () => playNext(false));
+      navigator.mediaSession.setActionHandler("stop", stopPlayback);
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (details.seekTime != null && isFinite(audio.duration)) {
+          audio.currentTime = details.seekTime;
+        }
+      });
     } catch (e) {}
   }
 
@@ -200,6 +226,152 @@
     audio.volume = Number(volume.value);
     try { localStorage.setItem("folkdj_vol", volume.value); } catch (e) {}
   });
+
+  stopBtn.addEventListener("click", stopPlayback);
+  miniStopBtn.addEventListener("click", stopPlayback);
+
+  miniPlayBtn.addEventListener("click", () => {
+    if (audio.paused) {
+      audio.play().catch(() => { statusEl.textContent = "Couldn't play this track."; });
+    } else {
+      audio.pause();
+    }
+  });
+
+  function showMiniPlayer() {
+    miniPlayer.hidden = false;
+    floatBtn.classList.add("active");
+    try { localStorage.setItem("folkdj_mini", "1"); } catch (e) {}
+  }
+  function hideMiniPlayer() {
+    miniPlayer.hidden = true;
+    floatBtn.classList.remove("active");
+    try { localStorage.setItem("folkdj_mini", "0"); } catch (e) {}
+  }
+  floatBtn.addEventListener("click", () => {
+    if (miniPlayer.hidden) showMiniPlayer(); else hideMiniPlayer();
+  });
+  miniCloseBtn.addEventListener("click", hideMiniPlayer);
+
+  // Drag to reposition the floating overlay (touch + mouse), kept on-screen.
+  (function enableDrag() {
+    let dragging = false, offX = 0, offY = 0;
+
+    function start(x, y) {
+      dragging = true;
+      const rect = miniPlayer.getBoundingClientRect();
+      offX = x - rect.left;
+      offY = y - rect.top;
+      miniPlayer.style.left = rect.left + "px";
+      miniPlayer.style.bottom = "auto";
+      miniPlayer.style.top = rect.top + "px";
+    }
+    function move(x, y) {
+      if (!dragging) return;
+      const maxX = window.innerWidth - miniPlayer.offsetWidth - 6;
+      const maxY = window.innerHeight - miniPlayer.offsetHeight - 6;
+      const nx = Math.min(Math.max(6, x - offX), Math.max(6, maxX));
+      const ny = Math.min(Math.max(6, y - offY), Math.max(6, maxY));
+      miniPlayer.style.left = nx + "px";
+      miniPlayer.style.top = ny + "px";
+    }
+    function end() { dragging = false; }
+
+    miniDrag.addEventListener("mousedown", (e) => start(e.clientX, e.clientY));
+    window.addEventListener("mousemove", (e) => move(e.clientX, e.clientY));
+    window.addEventListener("mouseup", end);
+
+    miniDrag.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      start(t.clientX, t.clientY);
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      move(t.clientX, t.clientY);
+    }, { passive: true });
+    window.addEventListener("touchend", end);
+  })();
+
+  // Restore overlay visibility preference.
+  try {
+    if (localStorage.getItem("folkdj_mini") === "1") showMiniPlayer();
+  } catch (e) {}
+
+  // Optional: "always-on-top" pop-out window via the Document Picture-in-Picture API
+  // (supported on Chromium desktop/Android; hidden automatically where unavailable).
+  if ("documentPictureInPicture" in window) {
+    pipBtn.hidden = false;
+    pipBtn.addEventListener("click", async () => {
+      try {
+        const pipWindow = await window.documentPictureInPicture.requestWindow({
+          width: 300,
+          height: 110,
+        });
+        pipWindow.document.head.innerHTML =
+          '<style>' +
+          'body{margin:0;font-family:sans-serif;background:#1c1630;color:#f5f3ff;display:flex;align-items:center;gap:10px;padding:12px;height:100%;box-sizing:border-box;}' +
+          '.t{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
+          'button{border:none;background:#7c5cff;color:#fff;border-radius:50%;width:36px;height:36px;font-size:15px;cursor:pointer;flex-shrink:0;}' +
+          '</style>';
+        const wrap = pipWindow.document.createElement("div");
+        wrap.style.cssText = "display:flex;align-items:center;gap:10px;width:100%;";
+        const t = pipWindow.document.createElement("div");
+        t.className = "t";
+        t.textContent = PLAYLIST[currentIndex()].title;
+        const playPip = pipWindow.document.createElement("button");
+        playPip.textContent = audio.paused ? "▶" : "⏸";
+        playPip.addEventListener("click", () => {
+          if (audio.paused) audio.play(); else audio.pause();
+        });
+        const stopPip = pipWindow.document.createElement("button");
+        stopPip.textContent = "⏹";
+        stopPip.addEventListener("click", stopPlayback);
+        wrap.appendChild(t);
+        wrap.appendChild(playPip);
+        wrap.appendChild(stopPip);
+        pipWindow.document.body.appendChild(wrap);
+
+        const syncPip = () => {
+          playPip.textContent = audio.paused ? "▶" : "⏸";
+          t.textContent = PLAYLIST[currentIndex()].title;
+        };
+        audio.addEventListener("play", syncPip);
+        audio.addEventListener("pause", syncPip);
+        pipWindow.addEventListener("pagehide", () => {
+          audio.removeEventListener("play", syncPip);
+          audio.removeEventListener("pause", syncPip);
+        });
+      } catch (e) {
+        statusEl.textContent = "Pop-out window isn't available in this browser.";
+      }
+    });
+  }
+
+  // Install-as-app prompt: standalone/installed apps get the most reliable
+  // background and screen-off playback on mobile.
+  let deferredInstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener("appinstalled", () => { installBtn.hidden = true; });
+
+  // Register service worker so the app shell + played songs are cached and
+  // playback keeps working reliably across app switches and reloads.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT") return;
